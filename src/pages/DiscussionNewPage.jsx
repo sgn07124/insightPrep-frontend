@@ -2,34 +2,65 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
+const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+const apiUrl = (p) => `${API_BASE}${p.startsWith("/") ? p : "/" + p}`;
+
 // 임시 모킹 (answerId로 미리보기)
 async function fetchAnswerPreview(answerId){
   await new Promise(r=>setTimeout(r,200));
   return { answerId, question: "예) 트랜잭션 격리 수준을 설명하세요.", answerPreview: "예) 격리수준은 RC/RR/Serializable..." };
 }
-async function createDiscussion(payload){
-  await new Promise(r=>setTimeout(r,400));
-  return { id: Math.floor(Math.random()*10000) };
+async function createDiscussion({ answerId, title, content }){
+  const res = await fetch(apiUrl('/post'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answerId, title, content })
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.message || '게시글 등록에 실패했습니다.');
+  const id = data?.result?.postId ?? data?.postId ?? data?.id;
+  if (typeof id !== 'number') throw new Error('생성된 글 ID를 확인할 수 없습니다.');
+  return { id };
 }
 
 export default function DiscussionNewPage(){
   const [sp] = useSearchParams();
   const answerId = Number(sp.get("answerId"));
+  const qpQuestion = sp.get("question");
+  const qpAnswer = sp.get("answer");
   const [preview, setPreview] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(()=>{
-    if(!answerId){ setLoading(false); return; }
-    fetchAnswerPreview(answerId).then((res)=>{ setPreview(res); setLoading(false); });
-  }, [answerId]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!answerId) { setLoading(false); return; }
+    if (qpQuestion || qpAnswer) {
+      setPreview({ answerId, question: qpQuestion || "", answerPreview: qpAnswer || "" });
+      setLoading(false);
+      return;
+    }
+    fetchAnswerPreview(answerId).then((res) => { setPreview(res); setLoading(false); });
+  }, [answerId, qpQuestion, qpAnswer]);
 
   const onSubmit = async (e)=>{
     e.preventDefault();
-    const { id } = await createDiscussion({ answerId, title, content });
-    navigate(`/discussions/${id}`);
+    setError('');
+    if (!answerId) { setError('연결된 답변이 없습니다. /review에서 다시 시도해 주세요.'); return; }
+    try {
+      setSubmitting(true);
+      const { id } = await createDiscussion({ answerId, title, content });
+      navigate(`/discussions/${id}`);
+    } catch (err) {
+      setError(err?.message || '게시글 등록에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if(loading) return <div>불러오는 중…</div>;
@@ -43,15 +74,17 @@ export default function DiscussionNewPage(){
 
       {preview ? (
         <div className="mb-4 rounded-lg border bg-white p-4">
-          <div className="text-xs text-gray-500 mb-1">연결된 답변 (Answer ID: {preview.answerId})</div>
-          <div className="font-semibold mb-1">질문: {preview.question}</div>
+          <div className="text-xs text-gray-500 mb-1">연결된 질문</div>
+          <div className="font-semibold mb-1 whitespace-pre-wrap">{preview.question || '(질문 내용 없음)'}</div>
           {preview.answerPreview && (
-            <div className="text-sm text-ink-700">내 답변(요약): {preview.answerPreview}</div>
+            <div className="text-sm text-ink-700 whitespace-pre-wrap">내 답변(요약): {preview.answerPreview}</div>
           )}
         </div>
       ) : (
         <div className="mb-4 text-sm text-red-600">답변 연결이 없습니다. (/review에서 진입 권장)</div>
       )}
+
+      {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
 
       <form className="grid gap-3" onSubmit={onSubmit}>
         <input
@@ -68,7 +101,22 @@ export default function DiscussionNewPage(){
           onChange={e=>setContent(e.target.value)}
           required
         />
-        <button className="h-11 rounded-md bg-brand-600 text-white hover:bg-brand-700">게시하기</button>
+        <button
+          disabled={submitting}
+          className={`h-11 rounded-md px-4 ${
+            submitting ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-600 text-white hover:bg-brand-700'
+          }`}
+        >
+          {submitting ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+              등록 중…
+            </span>
+          ) : '등록하기'}
+        </button>
       </form>
     </div>
   );
