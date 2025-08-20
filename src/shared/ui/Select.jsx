@@ -35,12 +35,12 @@ function cn(...args) {
 }
 
 const base =
-  "appearance-none border rounded-md bg-white text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed pr-9"; // space for caret
+  "appearance-none border rounded-md bg-white shadow-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 disabled:cursor-not-allowed pr-9 transition"; // space for caret
 
 const sizes = {
   sm: "h-9 px-3 text-sm",
-  md: "h-10 px-3",
-  lg: "h-11 px-3 text-lg rounded-lg",
+  md: "h-11 px-3 text-base",
+  lg: "h-12 px-4 text-lg rounded-lg",
 };
 
 export default function Select({
@@ -74,7 +74,7 @@ export default function Select({
       {label && (
         <label
           htmlFor={selectId}
-          className="mb-1 inline-block text-sm font-semibold text-ink-700"
+          className="mb-1 inline-block text-sm font-medium text-ink-700"
         >
           {label}
         </label>
@@ -112,7 +112,7 @@ export default function Select({
           className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-ink-400"
           aria-hidden="true"
         >
-          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" stroke="currentColor" strokeWidth="1.5">
             <path
               fillRule="evenodd"
               d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"

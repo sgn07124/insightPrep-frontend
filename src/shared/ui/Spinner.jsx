@@ -1,18 +1,19 @@
 import React from "react";
 
 /**
- * Spinner (Tailwind v4, no deps)
+ * Spinner (Tailwind v4, design tokens applied)
  *
  * Props:
  * - size?: "xs" | "sm" | "md" | "lg" (default "md")
+ * - variant?: "brand" | "ink" | "white" | "muted" | "danger" | "success" (default "brand")
  * - label?: string — accessible label for screen readers (default "로딩 중…")
  * - className?: string — extra classes
- * - inline?: boolean — if true, no wrapper for centering (default true)
+ * - inline?: boolean — if true, returns only the svg (default true)
  *
  * Usage:
  *   <Spinner />
  *   <Spinner size="sm" />
- *   <Spinner size="lg" label="데이터 불러오는 중" />
+ *   <Spinner variant="white" className="" />
  *   <div className="h-40 grid place-items-center"><Spinner inline={false} /></div>
  */
 
@@ -21,22 +22,35 @@ function cn(...args) {
 }
 
 const sizeMap = {
-  xs: "h-3 w-3",
-  sm: "h-4 w-4",
-  md: "h-5 w-5",
-  lg: "h-6 w-6",
+  xs: { box: "h-3 w-3", stroke: 2 },
+  sm: { box: "h-4 w-4", stroke: 3 },
+  md: { box: "h-5 w-5", stroke: 4 },
+  lg: { box: "h-6 w-6", stroke: 4 },
+};
+
+const colorMap = {
+  brand: "text-brand-600",
+  ink: "text-ink-700",
+  white: "text-white",
+  muted: "text-ink-400",
+  danger: "text-danger-600",
+  success: "text-success-600",
 };
 
 export default function Spinner({
   size = "md",
+  variant = "brand",
   label = "로딩 중…",
   className,
   inline = true,
   ...rest
 }) {
+  const sz = sizeMap[size] || sizeMap.md;
+  const color = colorMap[variant] || colorMap.brand;
+
   const svg = (
     <svg
-      className={cn("animate-spin text-current", sizeMap[size] || sizeMap.md, className)}
+      className={cn("animate-spin", sz.box, color, className)}
       viewBox="0 0 24 24"
       role="status"
       aria-label={label}
@@ -49,7 +63,7 @@ export default function Spinner({
         cy="12"
         r="10"
         stroke="currentColor"
-        strokeWidth="4"
+        strokeWidth={sz.stroke}
         fill="none"
       />
       <path

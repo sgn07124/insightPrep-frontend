@@ -181,13 +181,14 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <section className="min-h-[60vh] flex items-center justify-center">
-      <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
-        <h1 className="text-xl font-bold mb-2">비밀번호 재설정</h1>
-        <p className="text-sm text-gray-600 mb-4">이메일로 인증 코드를 받아 비밀번호를 재설정합니다.</p>
+    <>
+      <header className="mb-4">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink-900">비밀번호 재설정</h1>
+        <p className="mt-1 text-sm text-ink-600">이메일로 인증 코드를 받아 비밀번호를 재설정하세요.</p>
+      </header>
 
         {/* 안내/오류 메시지 */}
-        <div className="min-h-[1.25rem] text-sm mb-3">
+        <div className="min-h-[1.25rem] mb-3 text-sm" role="status" aria-live="polite">
           {error ? (
             <span className="text-red-600">{error}</span>
           ) : info ? (
@@ -312,7 +313,6 @@ export default function ForgotPasswordPage() {
             </button>
           </form>
         )}
-      </div>
-    </section>
+    </>
   );
 }

@@ -1,27 +1,22 @@
-
-
 import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 /**
- * Accessible Modal (Tailwind v4, no deps)
+ * Accessible Modal (Tailwind v4, design tokens applied)
  *
  * Props:
- * - open: boolean (required) — controls visibility
- * - onClose: () => void (required) — called when the modal should close
- * - title?: string | ReactNode — heading
- * - children?: ReactNode — body content
- * - footer?: ReactNode — footer area (actions)
+ * - open: boolean (required)
+ * - onClose: () => void (required)
+ * - title?: string | ReactNode
+ * - description?: string | ReactNode  // NEW: for helper text under title
+ * - children?: ReactNode
+ * - footer?: ReactNode
  * - size?: "sm" | "md" | "lg" (default "md")
  * - closeOnOverlay?: boolean (default true)
  * - closeOnEsc?: boolean (default true)
- * - initialFocusRef?: React.RefObject<HTMLElement> — element to focus on open
- *
- * Usage:
- *   const [open, setOpen] = useState(false);
- *   <Modal open={open} onClose={()=>setOpen(false)} title="설정">
- *     본문...
- *   </Modal>
+ * - initialFocusRef?: React.RefObject<HTMLElement>
+ * - panelClassName?: string            // NEW: customize panel container
+ * - bodyClassName?: string             // NEW: customize body area
  */
 
 function cn(...args) {
@@ -35,21 +30,24 @@ const sizeMap = {
 };
 
 const overlayBase =
-  "fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4";
+  "fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4";
 
 const panelBase =
-  "w-full rounded-xl bg-white shadow-card outline-none focus-visible:ring-2 focus-visible:ring-brand-300";
+  "w-full rounded-2xl bg-surface-card border border-surface-border shadow-card outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40";
 
 export default function Modal({
   open,
   onClose,
   title,
+  description,
   children,
   footer,
   size = "md",
   closeOnOverlay = true,
   closeOnEsc = true,
   initialFocusRef,
+  panelClassName = "",
+  bodyClassName = "",
 }) {
   const overlayRef = useRef(null);
   const panelRef = useRef(null);
@@ -65,7 +63,7 @@ export default function Modal({
     };
   }, [open]);
 
-  // Manage focus: save previous focus, set initial focus, trap tab within panel
+  // Manage focus & key handling
   useEffect(() => {
     if (!open) return;
 
@@ -122,6 +120,8 @@ export default function Modal({
     if (e.target === overlayRef.current) onClose?.();
   };
 
+  const hasDesc = Boolean(description);
+
   const modal = (
     <div
       className={overlayBase}
@@ -133,7 +133,8 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
-        className={cn(panelBase, sizeMap[size] || sizeMap.md)}
+        aria-describedby={hasDesc ? "modal-desc" : undefined}
+        className={cn(panelBase, sizeMap[size] || sizeMap.md, panelClassName)}
         ref={panelRef}
         tabIndex={-1}
         onMouseDown={(e) => {
@@ -143,18 +144,23 @@ export default function Modal({
       >
         {/* Header */}
         {(title || onClose) && (
-          <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b">
-            {title ? (
-              <h2 id="modal-title" className="text-lg font-bold">
-                {title}
-              </h2>
-            ) : (
-              <span />
-            )}
+          <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-surface-border">
+            <div>
+              {title && (
+                <h2 id="modal-title" className="text-lg font-bold text-ink-800">
+                  {title}
+                </h2>
+              )}
+              {hasDesc && (
+                <p id="modal-desc" className="mt-1 text-sm text-ink-600">
+                  {description}
+                </p>
+              )}
+            </div>
             <button
               type="button"
               onClick={onClose}
-              className="h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-surface-soft"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-surface-soft focus:outline-none focus:ring-2 focus:ring-brand-600/40"
               aria-label="닫기"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
@@ -168,10 +174,14 @@ export default function Modal({
         )}
 
         {/* Body */}
-        <div className="px-5 py-4">{children}</div>
+        <div className={cn("px-5 py-4 max-h-[70vh] overflow-y-auto", bodyClassName)}>
+          {children}
+        </div>
 
         {/* Footer */}
-        {footer && <div className="px-5 pb-5 pt-3 border-t">{footer}</div>}
+        {footer && (
+          <div className="px-5 pb-5 pt-3 border-t border-surface-border">{footer}</div>
+        )}
       </div>
     </div>
   );

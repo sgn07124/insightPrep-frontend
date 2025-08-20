@@ -1,30 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Input from "@/shared/ui/Input";
+import Button from "@/shared/ui/Button";
+import Spinner from "@/shared/ui/Spinner";
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 const apiUrl = (path) => `${API_BASE}${path.startsWith("/") ? path : "/" + path}`;
 
 /**
- * SignupPage with Email Verification Flow
- *
- * Requirements implemented:
- * - Email input with "전송" button on the right
- * - Clicking "전송" starts a 10-minute timer and changes button to "재전송"
- * - Below email, show "인증 번호" input + "인증" button
- * - Verify: on success → inputs become disabled/greyed (인증 완료 상태)
- *           on failure → show "일치하지 않습니다" or API error message
- * - Special case: when API returns "존재하는 이메일" code, show that message
- * - Below: password, password confirm, nickname inputs
- * - Password rule: >=8 chars with at least 1 uppercase, 1 lowercase, 1 special
- * - "회원가입" button is disabled until: email verified AND passwords match AND rule satisfied
- *
- * NOTE: send/verify API are mocked here. Replace with real API later.
+ * SignupPage with Email Verification Flow (Design-applied)
  */
 
 const TEN_MINUTES = 10 * 60; // seconds
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-// TODO: Replace with actual API calls
 async function apiSendEmailCode(email) {
   const res = await fetch(apiUrl("/auth/sendEmail"), {
     method: "POST",
@@ -38,14 +27,13 @@ async function apiSendEmailCode(email) {
     data = null;
   }
   if (res.ok && data?.code === "SEND_EMAIL_SUCCESS") {
-    return data; // { code: "SEND_EMAIL_SUCCESS", message: "이메일 전송 성공" }
+    return data;
   }
   const err = new Error(data?.message || "전송에 실패했습니다.");
   err.code = data?.code || "SEND_EMAIL_ERROR";
   throw err;
 }
 
-// TODO: Replace with actual API calls
 async function apiVerifyEmailCode({ email, code }) {
   const res = await fetch(apiUrl("/auth/verifyEmail"), {
     method: "POST",
@@ -149,7 +137,7 @@ export default function SignupPage() {
   }, []);
 
   const onSend = async () => {
-    // 1) Client-side validation first
+    if (emailStatus === "sending" || emailStatus === "verified") return;
     if (!isValidEmail(email)) {
       setEmailStatus("error");
       setEmailError("올바른 이메일 형식을 입력해주세요.");
@@ -160,7 +148,7 @@ export default function SignupPage() {
       setEmailStatus("sending");
       const res = await apiSendEmailCode(email);
       if (res?.code === "SEND_EMAIL_SUCCESS") {
-        setEmailStatus("sent"); // code input appears
+        setEmailStatus("sent");
         setSecondsLeft(TEN_MINUTES);
         setCode("");
       } else {
@@ -201,7 +189,6 @@ export default function SignupPage() {
         setEmailError(res?.message || "인증에 실패했습니다.");
       }
     } catch (e) {
-      // Keep inputs visible for retry as long as timer > 0
       setEmailStatus("error");
       if (e?.code === "CODE_NOT_MATCH_ERROR") {
         setEmailError("인증번호가 일치하지 않습니다.");
@@ -257,21 +244,23 @@ export default function SignupPage() {
 
   return (
     <>
-      <h1 className="text-xl font-bold mb-4">회원가입</h1>
+      <header className="mb-4">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink-900">회원가입</h1>
+        <p className="mt-1 text-sm text-ink-600">이메일 인증 후 비밀번호를 설정해 주세요.</p>
+      </header>
 
-      <form className="grid gap-3" onSubmit={onSubmit}>
+      <form className="grid gap-4" onSubmit={onSubmit}>
         {/* 이메일 + 전송 버튼 */}
-        <label className="grid gap-1">
-          <span className="text-sm font-semibold">이메일</span>
-          <div className="flex gap-2">
-            <input
+        <div>
+          <label className="text-sm font-medium text-ink-700">이메일</label>
+          <div className="mt-1 flex gap-2">
+            <Input
+              id="signup-email"
               type="email"
-              required
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (emailError) setEmailError("");
-                // Reset verification flow whenever email changes
                 setEmailStatus("idle");
                 setCode("");
                 if (timerRef.current) {
@@ -281,144 +270,150 @@ export default function SignupPage() {
                 setSecondsLeft(0);
               }}
               placeholder="name@example.com"
-              className={`h-11 flex-1 rounded-md border px-3 ${
-                emailDisabled ? "bg-gray-100 text-gray-500" : ""
-              }`}
               disabled={emailDisabled}
+              fullWidth
             />
-            <button
-              type="button"
+            <Button
+              as="button"
+              variant={emailDisabled ? "secondary" : "primary"}
               onClick={onSend}
+              type="button"
               disabled={
                 emailDisabled ||
                 emailStatus === "sending" ||
                 (secondsLeft > 0 && (emailStatus === "sent" || emailStatus === "error")) ||
                 !isValidEmail(email)
               }
-              className={`h-11 px-4 rounded-md ${
-                emailDisabled
-                  ? "bg-gray-200 text-gray-500"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 bg-brand-600 hover:bg-brand-700"
-              }`}
+              className="min-w-24"
             >
-              {emailBtnLabel}
-            </button>
+              {emailStatus === "verified" ? (
+                "인증 완료"
+              ) : emailStatus === "sending" ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner size="sm" variant="white" />
+                  전송 중…
+                </span>
+              ) : (
+                emailBtnLabel
+              )}
+            </Button>
           </div>
           {/* 타이머 & 에러 메시지 */}
-          <div className="min-h-[1.25rem]">
-            {secondsLeft > 0 && !emailVerified && (
-              <span className="text-xs text-ink-500">
-                남은 시간 {formatSeconds(secondsLeft)}
-              </span>
-            )}
-            {emailError && (
-              <div className="text-xs text-red-600">{emailError}</div>
+          <div className="min-h-[1.25rem] mt-1">
+            {emailVerified ? (
+              <span className="text-xs text-success-700">이메일 인증이 완료되었습니다.</span>
+            ) : (
+              <>
+                {secondsLeft > 0 && (
+                  <span className="text-xs text-ink-500">남은 시간 {formatSeconds(secondsLeft)}</span>
+                )}
+                {emailError && <div className="text-xs text-danger-600">{emailError}</div>}
+              </>
             )}
           </div>
-        </label>
+        </div>
 
         {/* 인증번호 + 인증 버튼 (전송 이후에 표시) */}
         {(emailStatus === "sent" || emailStatus === "verifying" || (emailStatus === "error" && secondsLeft > 0)) && (
-          <label className="grid gap-1">
-            <span className="text-sm font-semibold">인증 번호</span>
-            <div className="flex gap-2">
-              <input
-                type="text"
+          <div>
+            <label className="text-sm font-medium text-ink-700">인증 번호</label>
+            <div className="mt-1 flex gap-2">
+              <Input
+                id="signup-code"
                 inputMode="numeric"
-                pattern="\d*"
+                pattern="\\d*"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="6자리 인증번호"
-                className={`h-11 flex-1 rounded-md border px-3 ${
-                  codeDisabled ? "bg-gray-100 text-gray-500" : ""
-                }`}
                 disabled={codeDisabled}
+                fullWidth
               />
-              <button
-                type="button"
+              <Button
+                as="button"
+                variant="outline"
                 onClick={onVerify}
+                type="button"
                 disabled={codeDisabled || !code.trim() || emailStatus === "verifying"}
-                className={`h-11 px-4 rounded-md ${
-                  codeDisabled
-                    ? "bg-gray-200 text-gray-500"
-                    : "border hover:bg-surface-soft"
-                }`}
+                className="min-w-24"
               >
-                {emailStatus === "verifying" ? "인증 중…" : "인증"}
-              </button>
+                {emailStatus === "verifying" ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Spinner size="sm" />
+                    인증 중…
+                  </span>
+                ) : (
+                  "인증"
+                )}
+              </Button>
             </div>
             {secondsLeft > 0 && !emailVerified && (
-              <div className="text-xs text-ink-500">남은 시간 {formatSeconds(secondsLeft)}</div>
+              <div className="text-xs text-ink-500 mt-1">남은 시간 {formatSeconds(secondsLeft)}</div>
             )}
-          </label>
+          </div>
         )}
 
         {/* 비밀번호 */}
-        <label className="grid gap-1">
-          <span className="text-sm font-semibold">비밀번호</span>
-          <input
-            type="password"
-            required
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            className="h-11 rounded-md border px-3"
-            placeholder="대문자/소문자/특수문자 포함 8자 이상"
-          />
-          <div className="min-h-[1.25rem] text-xs">
-            {!pwStrong && pw.length > 0 && (
-              <span className="text-red-600">
-                대문자 1개 이상, 소문자 1개 이상, 특수문자 1개 이상 포함해야 합니다. (8자 이상)
-              </span>
-            )}
-          </div>
-        </label>
+        <Input
+          id="signup-password"
+          label="비밀번호"
+          type="password"
+          required
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          placeholder="대문자/소문자/특수문자 포함 8자 이상"
+          fullWidth
+        />
+        <div className="min-h-[1.25rem] -mt-2 text-xs">
+          {!pwStrong && pw.length > 0 && (
+            <span className="text-danger-600">
+              대문자 1개 이상, 소문자 1개 이상, 특수문자 1개 이상 포함해야 합니다. (8자 이상)
+            </span>
+          )}
+        </div>
 
         {/* 비밀번호 재입력 */}
-        <label className="grid gap-1">
-          <span className="text-sm font-semibold">비밀번호 재입력</span>
-          <input
-            type="password"
-            required
-            value={pw2}
-            onChange={(e) => setPw2(e.target.value)}
-            className="h-11 rounded-md border px-3"
-            placeholder="비밀번호를 다시 입력하세요"
-          />
-          <div className="min-h-[1.25rem] text-xs">
-            {pw2.length > 0 && !pwMatch && (
-              <span className="text-red-600">비밀번호가 일치하지 않습니다.</span>
-            )}
-          </div>
-        </label>
+        <Input
+          id="signup-password2"
+          label="비밀번호 재입력"
+          type="password"
+          required
+          value={pw2}
+          onChange={(e) => setPw2(e.target.value)}
+          placeholder="비밀번호를 다시 입력하세요"
+          fullWidth
+        />
+        <div className="min-h-[1.25rem] -mt-2 text-xs">
+          {pw2.length > 0 && !pwMatch && (
+            <span className="text-danger-600">비밀번호가 일치하지 않습니다.</span>
+          )}
+        </div>
 
         {/* 닉네임 */}
-        <label className="grid gap-1">
-          <span className="text-sm font-semibold">닉네임</span>
-          <input
-            required
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            className="h-11 rounded-md border px-3"
-            placeholder="표시할 닉네임"
-          />
-        </label>
+        <Input
+          id="signup-nickname"
+          label="닉네임"
+          required
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          placeholder="표시할 닉네임"
+          fullWidth
+        />
 
         {/* 회원가입 버튼 */}
-        <button
+        <Button
+          as="button"
+          variant="primary"
+          size="md"
+          className="mt-1"
           type="submit"
           disabled={!canSubmit}
-          className={`mt-1 h-11 rounded-md ${
-            canSubmit
-              ? "bg-indigo-600 text-white hover:bg-indigo-700 bg-brand-600 hover:bg-brand-700"
-              : "bg-gray-200 text-gray-500 cursor-not-allowed"
-          }`}
           title={!canSubmit ? "이메일 인증 완료 및 비밀번호 유효성/일치가 필요합니다." : undefined}
         >
           회원가입
-        </button>
+        </Button>
       </form>
 
-      <div className="mt-4 text-sm">
+      <div className="mt-5 text-sm">
         이미 계정이 있으신가요?{" "}
         <Link to="/login" className="text-brand-600 hover:underline">
           로그인

@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/features/auth/AuthProvider"
+import { useAuth } from "@/features/auth/AuthProvider";
+import Input from "@/shared/ui/Input";
+import Button from "@/shared/ui/Button";
+import Spinner from "@/shared/ui/Spinner";
 
 // env-based API base URL (same pattern as SignupPage)
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
@@ -21,7 +24,6 @@ export default function LoginPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    // 1) 클라이언트 유효성 검사 선행
     if (!isValidEmail(email)) {
       setError("올바른 이메일 형식을 입력해주세요.");
       return;
@@ -38,7 +40,7 @@ export default function LoginPage() {
       const res = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // 세션 쿠키 포함
+        credentials: "include",
         body: JSON.stringify({ email, password: pw, autoLogin }),
       });
 
@@ -55,11 +57,9 @@ export default function LoginPage() {
         return;
       }
 
-      // 실패 처리 (코드 기반)
       if (data?.code === "LOGIN_FAIL") {
         setError(data?.message || "이메일 또는 비밀번호가 올바르지 않습니다.");
       } else {
-        // 네트워크/기타 오류 한글화
         const msg = (data?.message || "").toString();
         if (msg.includes("Failed to fetch") || !navigator.onLine) {
           setError("서버에 연결할 수 없습니다. 네트워크 상태를 확인해 주세요.");
@@ -82,67 +82,83 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1 className="text-xl font-bold mb-4">로그인</h1>
-      <form className="grid gap-3" onSubmit={onSubmit}>
-        <label className="grid gap-1">
-          <span className="text-sm font-semibold">이메일</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (error) setError("");
-            }}
-            placeholder="name@example.com"
-            className="h-11 rounded-md border px-3"
-            disabled={disabled}
-          />
-        </label>
+      <header className="mb-4">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink-900">
+          로그인
+        </h1>
+        <p className="mt-1 text-sm text-ink-600">이메일과 비밀번호를 입력해 주세요.</p>
+      </header>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-semibold">비밀번호</span>
-          <input
-            type="password"
-            required
-            value={pw}
-            onChange={(e) => {
-              setPw(e.target.value);
-              if (error) setError("");
-            }}
-            placeholder="••••••••"
-            className="h-11 rounded-md border px-3"
-            disabled={disabled}
-          />
-        </label>
+      <form className="grid gap-4" onSubmit={onSubmit}>
+        <Input
+          id="login-email"
+          label="이메일"
+          required
+          type="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (error) setError("");
+          }}
+          placeholder="name@example.com"
+          disabled={disabled}
+          fullWidth
+        />
 
-        <label className="flex items-center gap-2 text-sm">
+        <Input
+          id="login-password"
+          label="비밀번호"
+          required
+          type="password"
+          value={pw}
+          onChange={(e) => {
+            setPw(e.target.value);
+            if (error) setError("");
+          }}
+          placeholder="••••••••"
+          disabled={disabled}
+          fullWidth
+        />
+
+        <label className="flex items-center gap-2 text-sm text-ink-700">
           <input
             type="checkbox"
             checked={autoLogin}
             onChange={(e) => setAutoLogin(e.target.checked)}
-            className="size-4"
+            className="h-4 w-4 rounded border-surface-border text-brand-600 focus:ring-brand-600/40"
             disabled={disabled}
           />
           자동 로그인
         </label>
 
-        {/* 오류 메시지 */}
-        <div className="min-h-[1.25rem] text-xs text-red-600">{error}</div>
-
-        <button
-          className={`mt-1 h-11 rounded-md ${
-            disabled
-              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-              : "bg-indigo-600 text-white hover:bg-indigo-700 bg-brand-600 hover:bg-brand-700"
-          }`}
-          disabled={disabled}
+        <div
+          className="min-h-[1.25rem] text-sm text-danger-600"
+          role="status"
+          aria-live="polite"
         >
-          {loading ? "로그인 중…" : "로그인"}
-        </button>
+          {error}
+        </div>
+
+        <Button
+          variant="primary"
+          size="md"
+          className="mt-1 inline-flex items-center justify-center"
+          disabled={disabled}
+          as="button"
+          type="submit"
+        >
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner size="sm" variant="white" />
+              로그인 중…
+            </span>
+          ) : (
+            "로그인"
+          )}
+        </Button>
       </form>
 
-      <div className="mt-4 flex items-center justify-between text-sm">
+      <div className="mt-5 flex items-center justify-between text-sm">
         <Link to="/forgot-password" className="text-brand-600 hover:underline">
           비밀번호 찾기
         </Link>

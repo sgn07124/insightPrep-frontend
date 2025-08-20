@@ -1,41 +1,18 @@
+// src/shared/ui/EmptyState.jsx
+import Button from "./Button";
 
-
-/**
- * Example usage:
- * <EmptyState
- *   icon={<SomeIcon />}
- *   title="No results found"
- *   description="Try adjusting your search or filter to find what you're looking for."
- *   action={<button className="btn btn-primary">Create Item</button>}
- * />
- */
-import React from "react";
-
-/**
- * @param {Object} props
- * @param {React.ReactNode=} props.icon
- * @param {string} props.title
- * @param {string=} props.description
- * @param {React.ReactNode=} props.action
- * @param {string=} props.className
- */
-const EmptyState = ({ icon, title, description, action, className = "" }) => {
+export default function EmptyState({ title = "데이터가 없습니다", description, action, onAction }) {
   return (
-    <div
-      className={`flex flex-col items-center justify-center text-center gap-4 min-h-48 ${className}`}
-    >
-      {icon && (
-        <div className="text-gray-400" style={{ fontSize: "3rem", lineHeight: 1 }}>
-          {icon}
+    <div className="rounded-2xl bg-surface-card border border-surface-border shadow-soft px-6 py-10 text-center">
+      <div className="text-lg font-semibold text-ink-800">{title}</div>
+      {description && <p className="mt-2 text-ink-600">{description}</p>}
+      {action && (
+        <div className="mt-6">
+          <Button onClick={onAction} variant="outline">
+            {action}
+          </Button>
         </div>
       )}
-      <div className="text-lg font-semibold text-ink-900">{title}</div>
-      {description && (
-        <div className="text-sm text-ink-600">{description}</div>
-      )}
-      {action && <div>{action}</div>}
     </div>
   );
-};
-
-export default EmptyState;
+}

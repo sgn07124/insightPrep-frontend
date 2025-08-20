@@ -7,13 +7,13 @@ export default function AppLayout() {
       <Header />
 
       <main className="flex-1">
-        <div className="container py-6">
+        <div className="container-page mx-auto max-w-6xl px-4 py-6">
           <Outlet />
         </div>
       </main>
 
       <footer className="mt-8 border-t">
-        <div className="container py-6 text-sm text-ink-500">
+        <div className="container-page mx-auto max-w-6xl px-4 py-6 text-sm text-ink-500">
           © {new Date().getFullYear()} InsightPrep
         </div>
       </footer>

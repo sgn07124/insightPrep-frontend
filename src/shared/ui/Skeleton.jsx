@@ -1,7 +1,7 @@
 import React from "react";
 
 /**
- * Skeleton (Tailwind v4)
+ * Skeleton (Tailwind v4 with design tokens)
  *
  * Props:
  * - width?: string | number — CSS width or Tailwind class
@@ -35,18 +35,22 @@ export default function Skeleton({
         }
       : undefined;
 
-  const baseClass =
-    "bg-ink-100 animate-pulse rounded " + (circle ? "rounded-full" : "");
+  const baseClass = cn(
+    "bg-surface-border/70 animate-pulse",
+    circle ? "rounded-full" : "rounded-xl"
+  );
 
   return (
     <>
       {Array.from({ length: count }).map((_, idx) => (
         <div
           key={idx}
+          role="status"
+          aria-label="로딩 중"
           className={cn(
             baseClass,
-            typeof width === "string" ? width : "",
-            typeof height === "string" ? height : "",
+            typeof width === "string" ? width : width ? "" : "w-full",
+            typeof height === "string" ? height : height ? "" : "h-4",
             className
           )}
           style={style}
