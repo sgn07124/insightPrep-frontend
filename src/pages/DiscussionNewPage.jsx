@@ -5,10 +5,18 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 const apiUrl = (p) => `${API_BASE}${p.startsWith("/") ? p : "/" + p}`;
 
-// 임시 모킹 (answerId로 미리보기)
 async function fetchAnswerPreview(answerId){
-  await new Promise(r=>setTimeout(r,200));
-  return { answerId, question: "예) 트랜잭션 격리 수준을 설명하세요.", answerPreview: "예) 격리수준은 RC/RR/Serializable..." };
+  const res = await fetch(apiUrl(`/question/${answerId}/preview`), {
+    method: 'GET',
+    credentials: 'include',
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.result) {
+    throw new Error(data?.message || '연결 프리뷰를 불러오지 못했습니다.');
+  }
+  const q = data.result.question ?? '';
+  const a = data.result.answer ?? '';
+  return { answerId, question: q, answer: a };
 }
 async function createDiscussion({ answerId, title, content }){
   const res = await fetch(apiUrl('/post'), {
@@ -41,7 +49,7 @@ export default function DiscussionNewPage(){
   useEffect(() => {
     if (!answerId) { setLoading(false); return; }
     if (qpQuestion || qpAnswer) {
-      setPreview({ answerId, question: qpQuestion || "", answerPreview: qpAnswer || "" });
+      setPreview({ answerId, question: qpQuestion || "", answer: qpAnswer || "" });
       setLoading(false);
       return;
     }
@@ -76,8 +84,8 @@ export default function DiscussionNewPage(){
         <div className="mb-4 rounded-lg border bg-white p-4">
           <div className="text-xs text-gray-500 mb-1">연결된 질문</div>
           <div className="font-semibold mb-1 whitespace-pre-wrap">{preview.question || '(질문 내용 없음)'}</div>
-          {preview.answerPreview && (
-            <div className="text-sm text-ink-700 whitespace-pre-wrap">내 답변(요약): {preview.answerPreview}</div>
+          {preview.answer && (
+            <div className="text-sm text-ink-700 whitespace-pre-wrap">내 답변: {preview.answer}</div>
           )}
         </div>
       ) : (
@@ -104,7 +112,9 @@ export default function DiscussionNewPage(){
         <button
           disabled={submitting}
           className={`h-11 rounded-md px-4 ${
-            submitting ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-brand-600 text-white hover:bg-brand-700'
+            submitting
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'border border-brand-600 text-brand-600 bg-white hover:bg-brand-50'
           }`}
         >
           {submitting ? (
