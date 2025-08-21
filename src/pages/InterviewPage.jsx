@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Button from "@/shared/ui/Button";
+import Textarea from "@/shared/ui/Textarea";
+import Spinner from "@/shared/ui/Spinner";
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 const apiUrl = (path) => `${API_BASE}${path.startsWith("/") ? path : "/" + path}`;
@@ -137,25 +140,21 @@ export default function InterviewPage() {
           },
         });
 
-        // 202(PENDING) 처리: 본문 1회만 파싱하고 재시도
+        // 202(PENDING) 처리
         if (res.status === 202) {
           const data = await res.json().catch(() => null);
-          console.debug("[feedback] 202 pending", data);
           if (data?.code === "FEEDBACK_PENDING") {
             setTimeout(tryFetch, 3000);
             return;
           }
-          // 202인데 예상 코드가 아니면 에러로 취급
           setFeedbackLoading(false);
           setError(data?.message || "피드백 대기 중 예기치 못한 응답입니다.");
           return;
         }
 
         const data = await res.json().catch(() => null);
-        console.debug("[feedback] status", res.status, "data", data);
 
         if (res.ok) {
-          // 일부 서버가 200에서도 PENDING 코드를 줄 수 있어 방어
           if (data?.code === "FEEDBACK_PENDING") {
             setTimeout(tryFetch, 3000);
             return;
@@ -174,8 +173,6 @@ export default function InterviewPage() {
             return;
           }
         }
-
-        // 기타 오류 처리
         setFeedbackLoading(false);
         setError(data?.message || "피드백 조회에 실패했습니다.");
       } catch (e) {
@@ -210,39 +207,39 @@ export default function InterviewPage() {
   const goMyReview = () => navigate("/review");
 
   return (
-    <div className="grid gap-6">
+    <div className="container-page mx-auto max-w-4xl px-4">
       {phase === "select" && (
-        <section className="rounded-lg border bg-white p-4">
-          <h2 className="text-base font-semibold mb-3">카테고리 선택</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+        <section className="rounded-2xl border border-surface-border bg-surface-card p-4 shadow-card">
+          <h2 className="text-lg font-semibold text-ink-900">카테고리 선택</h2>
+          <p className="mt-1 text-sm text-ink-600">원하는 분야의 문제를 골라 시작하세요.</p>
+
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             {CATEGORIES.map((c) => (
               <button
                 key={c.key}
                 type="button"
                 onClick={() => setSelectedCat(c.key)}
-                className={`h-10 rounded-md border text-sm ${
+                className={`h-10 rounded-lg border text-sm transition-colors ${
                   selectedCat === c.key
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700 bg-brand-600 hover:bg-brand-700 border-transparent"
-                    : "border-ink-200 text-ink-700 hover:bg-surface-soft"
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white border-surface-border text-ink-700 hover:bg-surface-soft"
                 }`}
               >
                 {c.label}
               </button>
             ))}
           </div>
+
           <div className="mt-4">
-            <button
-              type="button"
+            <Button
+              as="button"
               onClick={startSolving}
               disabled={!selectedCat}
-              className={`h-10 px-4 rounded-md ${
-                selectedCat
-                  ? "bg-indigo-600 text-white hover:bg-indigo-700 bg-brand-600 hover:bg-brand-700"
-                  : "bg-gray-200 text-gray-500 cursor-not-allowed"
-              }`}
+              variant="primary"
+              size="md"
             >
               문제 풀기
-            </button>
+            </Button>
           </div>
         </section>
       )}
@@ -250,47 +247,42 @@ export default function InterviewPage() {
       {phase !== "select" && (
         <div className="grid gap-4">
           {/* 질문 */}
-          <section className="rounded-lg border bg-white p-4 min-h-48">
+          <section className="rounded-2xl border border-surface-border bg-surface-card p-4 shadow-card min-h-48">
             <div className="text-sm font-semibold text-ink-500 mb-2">질문</div>
             {question ? (
-              <p className="font-medium whitespace-pre-wrap">{question.text}</p>
+              <p className="font-medium whitespace-pre-wrap text-ink-900">{question.text}</p>
             ) : (
               <div className="text-ink-500 text-sm">카테고리를 선택하고 문제를 시작하세요.</div>
             )}
           </section>
 
           {/* 답변 */}
-          <section className="rounded-lg border bg-white p-4 min-h-48">
+          <section className="rounded-2xl border border-surface-border bg-surface-card p-4 shadow-card min-h-48">
             <div className="text-sm font-semibold text-ink-500 mb-2">답변</div>
 
             {phase === "answer" && (
               <>
-                <textarea
+                <Textarea
+                  id="interview-answer"
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                   placeholder="여기에 답변을 작성하세요."
-                  className="w-full min-h-36 rounded-md border p-3"
+                  minRows={8}
+                  fullWidth
                 />
                 <div className="mt-3">
-                  <button
+                  <Button
+                    as="button"
                     onClick={submitAnswer}
                     disabled={!answer.trim() || submitting}
-                    className={`h-10 px-4 rounded-md ${
-                      !answer.trim() || submitting
-                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-indigo-600 text-white hover:bg-indigo-700 bg-brand-600 hover:bg-brand-700"
-                    }`}
+                    variant="primary"
                   >
                     {submitting ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                        </svg>
-                        제출 중…
-                      </div>
-                    ) : "답변 제출"}
-                  </button>
+                      <span className="inline-flex items-center gap-2"><Spinner size="sm" variant="white"/> 제출 중…</span>
+                    ) : (
+                      "답변 제출"
+                    )}
+                  </Button>
                 </div>
               </>
             )}
@@ -299,7 +291,7 @@ export default function InterviewPage() {
               <div className="mt-6">
                 <div className="text-sm font-semibold text-ink-500 mb-2">피드백</div>
                 {feedbackLoading ? (
-                  <div className="text-sm text-ink-500">피드백 생성 중…</div>
+                  <div className="inline-flex items-center gap-2 text-sm text-ink-600"><Spinner size="sm"/> 피드백 생성 중…</div>
                 ) : (
                   <>
                     <div className="flex items-center gap-2 text-sm mb-2">
@@ -308,27 +300,15 @@ export default function InterviewPage() {
                     </div>
                     <div className="mb-3">
                       <div className="text-sm font-semibold text-ink-500 mb-1">개선점</div>
-                      <div className="rounded-md border bg-surface p-3 whitespace-pre-wrap">{feedback.improvement}</div>
+                      <div className="rounded-md border border-surface-border bg-white p-3 whitespace-pre-wrap text-ink-800">{feedback.improvement}</div>
                     </div>
                     <div className="mb-3">
                       <div className="text-sm font-semibold text-ink-500 mb-1">모범 답안</div>
-                      <div className="rounded-md border bg-surface p-3 whitespace-pre-wrap">{feedback.modelAnswer}</div>
+                      <div className="rounded-md border border-surface-border bg-white p-3 whitespace-pre-wrap text-ink-800">{feedback.modelAnswer}</div>
                     </div>
                     <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={goNext}
-                        className="h-10 px-4 rounded-md border hover:bg-surface-soft"
-                      >
-                        다음 문제
-                      </button>
-                      <button
-                        type="button"
-                        onClick={goMyReview}
-                        className="h-10 px-4 rounded-md border hover:bg-surface-soft"
-                      >
-                        내가 푼 문제
-                      </button>
+                      <Button as="button" type="button" onClick={goNext} variant="outline">다음 문제</Button>
+                      <Button as="button" type="button" onClick={goMyReview} variant="secondary">내가 푼 문제</Button>
                     </div>
                   </>
                 )}
@@ -343,7 +323,7 @@ export default function InterviewPage() {
             )}
 
             {/* 에러 메시지 */}
-            <div className="mt-3 min-h-[1.25rem] text-xs text-red-600">{error}</div>
+            <div className="mt-3 min-h-[1.25rem] text-sm text-danger-600" role="alert">{error}</div>
           </section>
         </div>
       )}
